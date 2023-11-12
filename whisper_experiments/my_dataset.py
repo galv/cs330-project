@@ -10,7 +10,8 @@ import torchaudio
 DataChunk = namedtuple("DataChunk", "audio_filepath, text, start, end")
 
 class MyDataset(Dataset):
-    def __init__(self, manifest_json_path):
+    def __init__(self, manifest_json_path, processor):
+        self.processor = processor
         self.data = []
         with open(manifest_json_path, "rt") as fh:
             for line in fh:
@@ -26,8 +27,10 @@ class MyDataset(Dataset):
     def __getitem__(self, i):
         data = self.data[i]
         waveform, sample_rate = torchaudio.load(data.audio_filepath)
+        waveform = waveform[:, round(data.start * sample_rate):round(data.end * sample_rate)]
         waveform = torchaudio.functional.resample(waveform, sample_rate, 16_000)
-        return waveform[:, round(data.start * 16_000):round(data.end * 16_000)], data.text
+        input_features = self.processor(waveform[0, :], sampling_rate=16_000, return_tensors="pt").input_features
+        return input_features, data.text
 
     def __len__(self):
         return len(self.data)

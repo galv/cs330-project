@@ -1,4 +1,5 @@
 import fire
+import jiwer
 
 import torch
 
@@ -16,29 +17,30 @@ def main(manifest_json_path="/home/dgalvez/scratch/code/classes/cs330/project/sp
     model_id = "openai/whisper-large-v2"
 
     processor = AutoProcessor.from_pretrained(model_id)
+
+    dataset = MyDataset(manifest_json_path, processor)
+    data_loader = torch.utils.data.DataLoader(dataset, pin_memory=True, num_workers=1)
+
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
     )
-
     model.to(device)
 
-    dataset = MyDataset(manifest_json_path)
-    data_loader = torch.utils.data.DataLoader(dataset)
+    references = []
+    hypotheses = []
 
-    for input_speech, ref_text in data_loader:
-        assert input_speech.shape[0] == 1
-        input_features = processor(input_speech[0, 0, :], sampling_rate=16_000, return_tensors="pt").input_features
+    for input_features, ref_text in data_loader:
+        assert input_features.shape[0] == 1
         input_features = input_features.cuda().half()
         predicted_ids = model.generate(
-            input_features,
+            input_features[0],
             prompt_ids=processor.get_prompt_ids("cat,fish,animal", return_tensors="pt"))
         transcription = processor.batch_decode(predicted_ids)
         print("Hypothesis:", transcription)
         print("Reference:", ref_text)
 
-        pass
-
-    # import ipdb; ipdb.set_trace()
+    print("GALVEZ:wer=", jiwer.wer(references, hypotheses))
+    
 
 if __name__ == "__main__":
     fire.Fire(main)
