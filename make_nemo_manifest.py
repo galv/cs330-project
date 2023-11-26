@@ -15,11 +15,11 @@ import srt
 
 from schemas import ARCHIVE_ORG_SCHEMA
 
-def main(archive_org_path="/data/datasets/archive.org/CC_BY_SA/",
-         input_catalogue_path="/data/datasets/archive.org/CC_BY_SA.jsonl",
-         rev_srt_dir="/home/galv/code/alignment/rev_transcripts/"):
+def main(archive_org_path="scp_commands/",
+         input_catalogue_path="CC_BY_SA.jsonl",
+         rev_srt_dir="../rev_transcripts/"):
     spark = (
-        pyspark.sql.SparkSession.builder.master(f"local[16]")
+        pyspark.sql.SparkSession.builder.master("local[16]")
         .config("spark.eventLog.enabled", "true")
         .config("spark.sql.execution.arrow.pyspark.enabled", "true")
         .config(
@@ -200,10 +200,6 @@ def srt_to_text(srt_file_contents: pd.Series) -> pd.Series:
 @F.pandas_udf(T.DoubleType())
 def duration_udf(audio_file_series: pd.Series) -> pd.Series:
     return audio_file_series.apply(lambda x: librosa.get_duration(path=x))
-    # durations = []
-    # for audio_file in audio_file_series:
-    #     durations.append(librosa.get_duration(audio_file))
-    # return durations
 
 if __name__ == "__main__":
     fire.Fire(main)

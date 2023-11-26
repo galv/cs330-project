@@ -74,7 +74,8 @@ mpmath==1.3.0
 msgpack==1.0.7
 multidict==6.0.4
 multiprocess==0.70.15
--e git+https://github.com/remg1997/NeMo@00d52b9c7a4aeee7787b2a1b9260b68d8778872f#egg=nemo_toolkit&subdirectory=../../../third_party/NeMo
+-e third_party/NeMo
+# git+https://github.com/remg1997/NeMo@00d52b9c7a4aeee7787b2a1b9260b68d8778872f#egg=nemo_toolkit&subdirectory=../../../third_party/NeMo
 networkx==3.2.1
 nltk==3.8.1
 numba==0.58.1
