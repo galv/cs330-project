@@ -40,7 +40,7 @@ class MyDataset(Dataset):
 
         waveform = waveform[:, round(data.start * 16_000):round(data.end * 16_000)]
         input_features = self.processor(waveform[0, :], sampling_rate=16_000, return_tensors="pt").input_features
-        return input_features, data.text, data.audio_filepath
+        return data.id, input_features, data.text, data.audio_filepath
 
     def __len__(self):
         return len(self.data)
