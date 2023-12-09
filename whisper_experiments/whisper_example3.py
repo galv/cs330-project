@@ -23,9 +23,9 @@ def main(manifest_json_path="/home/dgalvez/scratch/code/classes/cs330/project/sp
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    # model_id = "openai/whisper-large-v2" # small
+    model_id = "openai/whisper-large-v2" # small
     # model_id = "distil-whisper/distil-large-v2"
-    model_id = "distil-whisper/distil-medium.en"
+    # model_id = "distil-whisper/distil-medium.en"
 
     processor = AutoProcessor.from_pretrained(model_id)
 
@@ -45,7 +45,7 @@ def main(manifest_json_path="/home/dgalvez/scratch/code/classes/cs330/project/sp
 
 
     current_sample_id = None
-    current_transcript_list = None
+    current_previous_transcript = None
 
     start_time = time.time()
     for i, (sample_id, input_features, ref_text, audio_filepath) in enumerate(data_loader): # tqdm.tqdm
@@ -59,27 +59,36 @@ def main(manifest_json_path="/home/dgalvez/scratch/code/classes/cs330/project/sp
 
 
         if sample_id != current_sample_id:
-            current_transcript_list = []
+            current_previous_transcript = ""
             current_sample_id = sample_id
         prompt = file_to_prompt_dictionary[audio_filepath[0]]
         # print("GALVEZ:,max_target_positions=", model.config.max_target_positions)
         
         # Need to be smarter about the prompt here. Use model.max_target_positions
         if append_previous_transcripts_to_prompt:
-            full_prompt = prompt + ". " + " ".join(current_transcript_list)
+            if prompt != "":
+                full_prompt = prompt + ". " + current_previous_transcript
+            else:
+                full_prompt = current_previous_transcript
         else:
             full_prompt = prompt
         input_features = input_features.cuda().half()
-        # print("GALVEZ: full prompt=", f"({full_prompt})")
+        # print("GALVEZ: full prompt=", full_prompt)
         prompt_ids = processor.get_prompt_ids(full_prompt, return_tensors="pt")
-        # print("GALVEZ8:", prompt_ids.size())
-        # if len(prompt_ids) >= model.config.max_target_positions:
-        #     for i in range(len(current_transcript_list) - 1, -1, -1):
-        #         full_prompt = prompt + ". " + " ".join(current_transcript_list[:i])
+        # print("GALVEZ: prompt size", prompt_ids.size())
+        # if (append_previous_transcripts_to_prompt and
+        #     len(prompt_ids) >= model.config.max_target_positions):
+        #     # for i in range(len(current_transcript_list) - 1, -1, -1):
+        #     for i in range(len(current_transcript_list)):
+        #         if prompt != "":
+        #             full_prompt = prompt + ". " + " ".join(current_transcript_list[i:])
+        #         else:
+        #             full_prompt = " ".join(current_transcript_list[i:])
         #         prompt_ids = processor.get_prompt_ids(full_prompt, return_tensors="pt")
         #         if len(prompt_ids) < model.config.max_target_positions:
         #             break
-        # print("GALVEZ:truncated prompt=", f"({full_prompt})")
+        # print("GALVEZ:truncated prompt=", full_prompt)
+        # print("GALVEZ:truncated prompt size=", prompt_ids.size())
         predicted_ids = model.generate(
             input_features[0],
             prompt_ids=prompt_ids)
@@ -99,11 +108,11 @@ def main(manifest_json_path="/home/dgalvez/scratch/code/classes/cs330/project/sp
             t = t.lstrip(" ")
             new_hypotheses.append(t)
 
-        # print("AFTER:", new_hypotheses[0])
+        # print("AFTER:(", new_hypotheses[0], ")")
 
         assert len(new_hypotheses) == 1
 
-        current_transcript_list.append(new_hypotheses[0])
+        current_previous_transcript = new_hypotheses[0]
 
         # print("GALVEZ:", new_hypotheses)
 
